@@ -11,14 +11,59 @@
 
 #####
 #add multiple-instance-protection here
-#####
+if [[ ! -z $(ps | grep $(basename $0) | grep -v $$) ]];then
+	echo "ERROR: Already running."
+	echo "Terminating without any changes..."
+	exit
+fi
+	
 
 DEFAULT_SSID="attwifi"
 DEFAULT_LIST="default"
+DEFAULT_LIST_ONLINE=""
 LIST_PATH="/etc/homepass.lists/"
-#RUN_MODE=${1:-"once"}
 #DELAY_TIME=${2:-120} 
 #LOPP_TURNS=${3:-30}
+
+RUN_MODE=${1:-"once"}
+
+if [[ $RUN_MODE = "setup"]];then
+	echo "Running Setup..."
+	if [ -e $LIST_PATH$DEFAULT_LIST ];then
+		echo "Default list exists."
+		echo "Skipping it's update."
+	else
+		echo "Default doesn't exist."
+		mkdir -p $LIST_PATH
+		if [[ -e /etc/homepass.list ]]; then
+			echo "Found /etc/homepass.list"
+			echo "What shall I do?"
+			USR_IN=false
+			while [ ! $USR_IN ]; do
+				echo "[m]ove it, [c]opy it, [l]ink it, [i]gnore and download a new"
+				read -p -n 1 do_what
+				USR_IN=true
+				case ${do_what,,} in
+					"m") mv /etc/homepass.list $DEFAULT_PATH$DEFAULT_LIST;;
+					"c") cp /etc/homepass.list $DEFAULT_PATH$DEFAULT_LIST;;
+					"l") ln -s /etc/homepass.list $DEFAULT_PATH$DEFAULT_LIST;;
+					"i") ;;
+					*) USR_IN=false
+						echo "Your input is not valid.";;
+				esac
+			done
+		else
+            echo "Downloading new List..."
+            wget -O $DEFAULT_PATH$DEFAULT_LIST $DEFAULT_LIST_ONLINE
+        fi
+        
+	fi 
+
+
+	exit 0
+fi
+
+#####
 
 if [ -s $3 ] ; then
     LIST_FILE=$3;
@@ -30,7 +75,7 @@ if [ -s $3 ] ; then
         echo "MAC address list is missing or zero in length."
         exit
       fi
-    LIST_FILE=/etc/homepass.lists/default;
+    LIST_FILE=$DEFAULT_PATH$DEFAULT_LIST;
     fi
     
 fi
